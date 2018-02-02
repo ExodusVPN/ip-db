@@ -1,0 +1,11 @@
+[package]
+name = "ip-db"
+version = "0.1.0"
+authors = ["luozijun <luozijun.assistant@protonmail.com>"]
+
+[workspace]
+members = [ "iana-tool" ]
+
+[dependencies]
+
+

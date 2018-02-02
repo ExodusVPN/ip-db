@@ -1,0 +1,25 @@
+[package]
+name = "iana-tool"
+version = "0.1.0"
+authors = ["luozijun <luozijun.assistant@protonmail.com>"]
+
+[dependencies]
+futures = "0.1"
+hyper = "0.11"
+hyper-tls = "0.1"
+ftp = "2.2"
+tokio-core = "0.1"
+clap = "2.29"
+ipnetwork = "0.12"
+ip-db = { path = "../" }
+
+[dependencies.smoltcp]
+git = "https://github.com/m-labs/smoltcp.git"
+branch = "master"
+default-features = false
+features = [
+    "std", "log",
+    "proto-ipv4", "proto-ipv6",
+    "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"
+]
+
