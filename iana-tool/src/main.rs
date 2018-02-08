@@ -472,9 +472,7 @@ fn boot () {
     if data_path.exists() == false {
         fs::create_dir(data_path).unwrap();
     }
-
     
-
     if let Some(_sub_m) = matches.subcommand_matches("sync") {
         sync(data_path.to_path_buf());
     } else if let Some(_sub_m) = matches.subcommand_matches("parse") {
