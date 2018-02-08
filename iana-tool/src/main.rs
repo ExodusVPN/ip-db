@@ -9,18 +9,18 @@ extern crate clap;
 
 extern crate ip_db;
 
+mod rir;
 
 use futures::{Future};
 use futures::future;
 use tokio_core::reactor::Core;
 #[allow(unused_imports)]
 use smoltcp::wire::{
-    IpAddress, IpCidr, Ipv4Address, Ipv4Cidr, 
+    IpAddress, IpCidr, 
+    Ipv4Address, Ipv4Cidr, 
     Ipv6Address, Ipv6Cidr
 };
 
-
-use std::fmt;
 use std::time::Duration;
 use std::str::FromStr;
 use std::sync::mpsc::channel;
@@ -31,88 +31,13 @@ use std::fs::{self, File, OpenOptions};
 use std::net::{ToSocketAddrs, Ipv4Addr, Ipv6Addr};
 
 use ip_db::{Registry, Country, Status};
+use rir::{Record, Ipv4Record, Ipv6Record};
 
 
-const DATA_DIR: &'static str = "data";
-
-
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-struct Ipv4Record {
-    src_registry: Registry,
-    country: Country,
-    start: Ipv4Address,
-    num: usize,
-    status: Status,
-    dst_registry: Option<Registry>,
-}
-
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-struct Ipv6Record {
-    src_registry: Registry,
-    country: Country,
-    start: Ipv6Address,
-    prefix: u8,
-    status: Status,
-    dst_registry: Option<Registry>,
-}
-
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-enum Record {
-    Ipv4(Ipv4Record),
-    Ipv6(Ipv6Record)
-}
-
-
-impl fmt::Display for Ipv4Record {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {} ipv4 {} {} {} {}",
-            self.src_registry,
-            self.country,
-            format!("{}", self.start),
-            self.num,
-            self.status,
-            match self.dst_registry {
-                Some(reg) => format!("{}", reg),
-                None => "none".to_string()
-            })
-    }
-}
-
-impl fmt::Display for Ipv6Record {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {} ipv6 {} {} {} {}",
-            self.src_registry,
-            self.country,
-            format!("{}", self.start),
-            self.prefix,
-            self.status,
-            match self.dst_registry {
-                Some(reg) => format!("{}", reg),
-                None => "none".to_string()
-            })
-    }
-}
-
-impl fmt::Display for Record {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Record::Ipv4(ref ipv4_record) => fmt::Display::fmt(&ipv4_record, f),
-            &Record::Ipv6(ref ipv6_record) => fmt::Display::fmt(&ipv6_record, f),
-        }
-    }
-}
-
-
-
-fn get_data_dir() -> PathBuf {
-    let path = Path::new(DATA_DIR);
-    if path.exists() == false {
-        fs::create_dir(path).unwrap();
-    }
-    path.to_path_buf()
-}
-
-fn ftp_get<W: Write, A: ToSocketAddrs>(sa: &A, filepath: &str, output: &mut W) -> Result<usize, ftp::types::FtpError> {
+fn ftp_get<W: Write, A: ToSocketAddrs>(sa: &A, 
+                                       filepath: &str,
+                                       output: &mut W)
+                                            -> Result<usize, ftp::types::FtpError> {
     let mut ftp_buffer = [0u8; 4096];
     let mut size = 0usize;
     match ftp::FtpStream::connect(sa) {
@@ -143,7 +68,7 @@ fn ftp_get<W: Write, A: ToSocketAddrs>(sa: &A, filepath: &str, output: &mut W) -
     }
 }
 
-fn sync() {
+fn sync(data_path: PathBuf) {
     let mut core = Core::new().unwrap();
     let https_client = hyper::Client::configure()
                         .connector(hyper_tls::HttpsConnector::new(4, &core.handle()).unwrap())
@@ -171,7 +96,7 @@ fn sync() {
 
         if uri.scheme() == Some("http") || uri.scheme() == Some("https") {
             let md5_file_url = format!("{}.md5", url);
-            let local_md5_file_path = Path::new(DATA_DIR).join(format!("{}.md5", filename));
+            let local_md5_file_path = data_path.join(format!("{}.md5", filename));
 
             let job = https_client.get(md5_file_url.parse().unwrap())
                     .and_then(move |res| {
@@ -217,12 +142,13 @@ fn sync() {
                 Ok(is_updated) => {
                     if !is_updated {
                         println!("Update {:?}", url);
+                        let data_path_clone = data_path.clone();
+
                         let job2 = https_client.get(uri)
                             .and_then(move |res| {
                                 let status_code = res.status().as_u16();
-                                let data_dir = get_data_dir();
                                 let mut file = OpenOptions::new().create(true).write(true)
-                                            .open(data_dir.join(filename)).unwrap();
+                                            .open(data_path_clone.join(filename)).unwrap();
 
                                 use futures::Stream;
                                 res.body().for_each(move |chunk| {
@@ -252,7 +178,7 @@ fn sync() {
         } else if uri.scheme() == Some("ftp") {
             let sa = format!("{}:{}", uri.host().unwrap(), uri.port().unwrap_or(21) );
             let md5_file_url = format!("{}.md5", uri.path());
-            let local_md5_file_path = Path::new(DATA_DIR).join(format!("{}.md5", filename));
+            let local_md5_file_path = data_path.join(format!("{}.md5", filename));
 
             let mut is_updated = false;
 
@@ -294,7 +220,7 @@ fn sync() {
             if is_updated == false {
                 // update
                 let mut file = OpenOptions::new().create(true).write(true)
-                                    .open(get_data_dir().join(filename))
+                                    .open(data_path.clone().join(filename))
                                     .unwrap();
                 match ftp_get(&sa, uri.path(), &mut file) {
                     Ok(_) => {
@@ -319,7 +245,7 @@ fn sync() {
         let filename = "delegated-iana-latest";
         let fileurl = "ftp://ftp.apnic.net/public/stats/iana/delegated-iana-latest";
         let mut file = OpenOptions::new().create(true).write(true)
-                            .open(get_data_dir().join(filename))
+                            .open(data_path.join(filename))
                             .unwrap();
         let uri: hyper::Uri = fileurl.parse().unwrap();
         let sa = format!("{}:{}", uri.host().unwrap(), uri.port().unwrap_or(21));
@@ -356,7 +282,7 @@ fn sync() {
     }
 }
 
-fn parse() {
+fn parse(data_path: PathBuf, format: &str) {
     let filenames = [
         // "delegated-arin-latest",
         "delegated-arin-extended-latest",
@@ -376,7 +302,7 @@ fn parse() {
     let mut paths: Vec<PathBuf> = vec![];
 
     for filename in filenames.iter() {
-        let path = Path::new(DATA_DIR).join(filename);
+        let path = data_path.join(filename);
         if path.exists() && path.is_file() {
             paths.push(path.to_path_buf());
         }
@@ -386,13 +312,18 @@ fn parse() {
         let fields: Vec<&str> = line.split("|").collect();
         if fields.len() >= 7 {
             let src_registry = Registry::from_str(fields[0]).unwrap();
-            let country_code = Country::from_str( if fields[1].trim() == "" { "ZZ" } else { fields[1] } ).unwrap();
+            let cc = if fields[1].trim() == "" { "ZZ" } else { fields[1] };
+            let country_code = Country::from_str(cc).unwrap();
             let type_  = fields[2];
 
             if type_ == "ipv4" {
                 let start: Ipv4Addr  = fields[3].parse().unwrap();
-                let start_ip = Ipv4Address::from_bytes(&start.octets());
+                let start_ip = Ipv4Address(start.octets());
                 let num: usize = fields[4].parse().unwrap();
+
+                let nums = num - 1;
+                let bits_len = nums.count_ones() + nums.count_zeros() - nums.leading_zeros();
+                assert!(bits_len <= 32);
 
                 let status_ = fields[6];
                 let (status, dst_registry) = if src_registry == Registry::Iana {
@@ -410,8 +341,10 @@ fn parse() {
                 }));
             } else if type_ == "ipv6" {
                 let start: Ipv6Addr  = fields[3].parse().unwrap();
-                let start_ip = Ipv6Address::from_bytes(&start.octets());
+                let start_ip = Ipv6Address(start.octets());
                 let prefix: u8 = fields[4].parse().unwrap();
+
+                assert!(prefix <= 128);
 
                 let status_ = fields[6];
                 let (status, dst_registry) = if src_registry == Registry::Iana {
@@ -437,13 +370,17 @@ fn parse() {
 
     let mut records = HashSet::new();
 
-    let output_file_path = get_data_dir().join("all");
+    let output_file_path = data_path.join("all");
+    let _ = fs::remove_file(&output_file_path);
+    
+    println!("Output file: {:?}", output_file_path);
 
-    fs::remove_file(&output_file_path).unwrap();
     let mut output_file = OpenOptions::new().create(true).write(true).append(true)
                             .open(&output_file_path)
                             .unwrap();
     for filepath in paths {
+        println!("parse {:?} ...", filepath);
+
         let mut file = File::open(&filepath).unwrap();
         let mut content = String::new();
         file.read_to_string(&mut content).unwrap();
@@ -462,7 +399,15 @@ fn parse() {
             match parse_ip_record_line(line) {
                 Some(record) => {
                     if records.insert(record) {
-                        output_file.write_all( format!("{}\n", record).as_bytes() ).unwrap();
+                        let oline = if format == "rir" {
+                            record.to_rir()
+                        } else if format == "cidr" {
+                            record.to_cidr()
+                        } else {
+                            unreachable!();
+                        };
+
+                        output_file.write_all( format!("{}\n", oline).as_bytes() ).unwrap();
                     }
                 }
                 None => {  }
@@ -504,14 +449,41 @@ fn boot () {
         .subcommand(
             SubCommand::with_name("parse")
                 .about("Parse IANA RIR db file")
+                .arg(
+                    Arg::with_name("format")
+                        .long("format")
+                        .required(false)
+                        .default_value("rir")
+                        .help("Specify the output format(RIR/CIDR)")
+                )
+        )
+        .arg(
+            Arg::with_name("data-path")
+                .long("data-path")
+                .required(false)
+                .default_value("data")
+                .help("Specify the default data path")
         );
 
     let matches = app.get_matches();
 
+    let path_ = matches.value_of("data-path").unwrap().to_lowercase();
+    let data_path = Path::new(path_.as_str());
+    if data_path.exists() == false {
+        fs::create_dir(data_path).unwrap();
+    }
+
+    
+
     if let Some(_sub_m) = matches.subcommand_matches("sync") {
-        sync();
+        sync(data_path.to_path_buf());
     } else if let Some(_sub_m) = matches.subcommand_matches("parse") {
-        parse();
+        let format = _sub_m.value_of("format").unwrap().to_lowercase();
+        if format != "rir" && format != "cidr" {
+            println!("{}", &_sub_m.usage());
+        } else {
+            parse(data_path.to_path_buf(), &format);
+        }
     } else {
         println!("{}", &matches.usage());
     }

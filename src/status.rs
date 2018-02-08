@@ -5,7 +5,7 @@ use std::fmt;
 use error::Error;
 
 
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub enum Status {
     Allocated,
     Assigned,

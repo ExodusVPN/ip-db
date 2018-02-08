@@ -9,7 +9,7 @@ use error::Error;
 /// Country Code List: ISO 3166-1993 (E)
 /// 
 /// Download from: `https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes`
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub enum Country {
     AF,
     AX,

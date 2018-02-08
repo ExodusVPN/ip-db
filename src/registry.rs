@@ -8,7 +8,7 @@ use error::Error;
 /// Number Resources
 /// 
 /// `https://www.iana.org/numbers`
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub enum Registry {
     /// Africa Region
     Afrinic,
