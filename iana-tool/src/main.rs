@@ -282,7 +282,7 @@ fn sync(data_path: PathBuf) {
     }
 }
 
-fn parse(data_path: PathBuf, format: &str) {
+fn parse(data_path: PathBuf) {
     let filenames = [
         // "delegated-arin-latest",
         "delegated-arin-extended-latest",
@@ -319,11 +319,9 @@ fn parse(data_path: PathBuf, format: &str) {
             if type_ == "ipv4" {
                 let start: Ipv4Addr  = fields[3].parse().unwrap();
                 let start_ip = Ipv4Address(start.octets());
-                let num: usize = fields[4].parse().unwrap();
+                let num: u32 = fields[4].parse().unwrap();
 
-                let nums = num - 1;
-                let bits_len = nums.count_ones() + nums.count_zeros() - nums.leading_zeros();
-                assert!(bits_len <= 32);
+                assert!(num > 0);
 
                 let status_ = fields[6];
                 let (status, dst_registry) = if src_registry == Registry::Iana {
@@ -399,15 +397,14 @@ fn parse(data_path: PathBuf, format: &str) {
             match parse_ip_record_line(line) {
                 Some(record) => {
                     if records.insert(record) {
-                        let oline = if format == "rir" {
-                            record.to_rir()
-                        } else if format == "cidr" {
-                            record.to_cidr()
-                        } else {
-                            unreachable!();
-                        };
-
-                        output_file.write_all( format!("{}\n", oline).as_bytes() ).unwrap();
+                        // let oline = if format == "rir" {
+                        //     record.to_rir()
+                        // } else if format == "cidr" {
+                        //     record.to_cidr()
+                        // } else {
+                        //     unreachable!();
+                        // };
+                        output_file.write_all( format!("{}\n", record).as_bytes() ).unwrap();
                     }
                 }
                 None => {  }
@@ -480,7 +477,7 @@ fn boot () {
         if format != "rir" && format != "cidr" {
             println!("{}", &_sub_m.usage());
         } else {
-            parse(data_path.to_path_buf(), &format);
+            parse(data_path.to_path_buf());
         }
     } else {
         println!("{}", &matches.usage());

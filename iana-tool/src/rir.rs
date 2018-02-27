@@ -17,7 +17,7 @@ pub struct Ipv4Record {
     pub src_registry: Registry,
     pub country: Country,
     pub start: Ipv4Address,
-    pub num: usize,
+    pub num: u32,
     pub status: Status,
     pub dst_registry: Option<Registry>,
 }
@@ -54,12 +54,23 @@ impl Ipv4Record {
     }
 
     // CIDR format
+    #[allow(dead_code,unreachable_code)]
     pub fn to_cidr(&self) -> String {
+        // BUG
+        // 185.30.232.0 - 185.30.232.63  64
+        // 23.18.1.0    - 23.18.23.255   5888
+        unimplemented!();
+
         let nums = self.num - 1;
-        let bits_len = nums.count_ones() + nums.count_zeros() - nums.leading_zeros();
-        assert!(bits_len <= 32);
-        
-        let prefix_len = 32 - bits_len;
+
+        // let bits_len = nums.count_ones() + nums.count_zeros() - nums.leading_zeros();
+        // assert!(bits_len <= 32);
+        // let prefix_len = 32 - bits_len;
+
+        assert_eq!(nums.count_zeros(), nums.leading_zeros());
+        let prefix_len = 32 - nums.count_ones();
+        assert!(prefix_len <= 32);
+
         let v4_block = Ipv4Cidr::new(self.start, prefix_len as u8);
 
         format!("{} {} ipv4 {} {} {}",
@@ -96,6 +107,7 @@ impl Ipv6Record {
     }
 
     // CIDR format
+    #[allow(dead_code)]
     pub fn to_cidr(&self) -> String {
         let v6_block = Ipv6Cidr::new(self.start, self.prefix);
         format!("{} {} ipv6 {} {} {}",
@@ -118,6 +130,7 @@ impl Ord for Ipv6Record {
 
 impl Record {
     /// RIR format
+    #[allow(dead_code)]
     pub fn to_rir(&self) -> String {
         match *self {
             Record::Ipv4(ipv4_record) => ipv4_record.to_rir(),
@@ -126,6 +139,7 @@ impl Record {
     }
 
     // CIDR format
+    #[allow(dead_code)]
     pub fn to_cidr(&self) -> String {
         match *self {
             Record::Ipv4(ipv4_record) => ipv4_record.to_cidr(),
