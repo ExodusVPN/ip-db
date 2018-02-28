@@ -10,6 +10,7 @@ extern crate clap;
 extern crate ip_db;
 
 mod rir;
+mod ipv4_range;
 
 use futures::{Future};
 use futures::future;
@@ -282,7 +283,7 @@ fn sync(data_path: PathBuf) {
     }
 }
 
-fn parse(data_path: PathBuf) {
+fn parse(data_path: PathBuf, format: String) {
     let filenames = [
         // "delegated-arin-latest",
         "delegated-arin-extended-latest",
@@ -397,14 +398,14 @@ fn parse(data_path: PathBuf) {
             match parse_ip_record_line(line) {
                 Some(record) => {
                     if records.insert(record) {
-                        // let oline = if format == "rir" {
-                        //     record.to_rir()
-                        // } else if format == "cidr" {
-                        //     record.to_cidr()
-                        // } else {
-                        //     unreachable!();
-                        // };
-                        output_file.write_all( format!("{}\n", record).as_bytes() ).unwrap();
+                        let oline = if format == "rir" {
+                            record.to_rir()
+                        } else if format == "cidr" {
+                            record.to_cidr()
+                        } else {
+                            unreachable!();
+                        };
+                        output_file.write_all( format!("{}\n", oline ).as_bytes() ).unwrap();
                     }
                 }
                 None => {  }
@@ -477,7 +478,7 @@ fn boot () {
         if format != "rir" && format != "cidr" {
             println!("{}", &_sub_m.usage());
         } else {
-            parse(data_path.to_path_buf());
+            parse(data_path.to_path_buf(), format);
         }
     } else {
         println!("{}", &matches.usage());

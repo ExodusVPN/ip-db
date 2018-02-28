@@ -1,7 +1,5 @@
 
-#[allow(unused_imports)]
 use smoltcp::wire::{
-    IpAddress, IpCidr, 
     Ipv4Address, Ipv4Cidr, 
     Ipv6Address, Ipv6Cidr
 };
@@ -10,6 +8,9 @@ use ip_db::{Registry, Country, Status};
 
 use std::fmt;
 use std::cmp::Ordering;
+use std::net::Ipv4Addr;
+
+use ipv4_range::Ipv4Range;
 
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]
@@ -53,35 +54,24 @@ impl Ipv4Record {
             })
     }
 
-    // CIDR format
-    #[allow(dead_code,unreachable_code)]
+    /// CIDR format
     pub fn to_cidr(&self) -> String {
-        // BUG
-        // 185.30.232.0 - 185.30.232.63  64
-        // 23.18.1.0    - 23.18.23.255   5888
-        unimplemented!();
-
-        let nums = self.num - 1;
-
-        // let bits_len = nums.count_ones() + nums.count_zeros() - nums.leading_zeros();
-        // assert!(bits_len <= 32);
-        // let prefix_len = 32 - bits_len;
-
-        assert_eq!(nums.count_zeros(), nums.leading_zeros());
-        let prefix_len = 32 - nums.count_ones();
-        assert!(prefix_len <= 32);
-
-        let v4_block = Ipv4Cidr::new(self.start, prefix_len as u8);
-
-        format!("{} {} ipv4 {} {} {}",
+        let end_ip_number = u32::from(Ipv4Addr::from(self.start.0)) + (self.num - 1);
+        let end_ip = Ipv4Address( Ipv4Addr::from(end_ip_number).octets() );
+        
+        Ipv4Range::new(self.start, end_ip).cidrs().map(|cidr: Ipv4Cidr| {
+            format!("{} {} ipv4 {} {} {}",
             self.src_registry,
             self.country,
-            v4_block,
+            cidr,
             self.status,
             match self.dst_registry {
                 Some(reg) => format!("{}", reg),
                 None => "none".to_string()
             })
+        })
+        .collect::<Vec<String>>()
+        .join("\n")
     }
 }
 
@@ -106,7 +96,7 @@ impl Ipv6Record {
             })
     }
 
-    // CIDR format
+    /// CIDR format
     #[allow(dead_code)]
     pub fn to_cidr(&self) -> String {
         let v6_block = Ipv6Cidr::new(self.start, self.prefix);
@@ -138,7 +128,7 @@ impl Record {
         }
     }
 
-    // CIDR format
+    /// CIDR format
     #[allow(dead_code)]
     pub fn to_cidr(&self) -> String {
         match *self {
