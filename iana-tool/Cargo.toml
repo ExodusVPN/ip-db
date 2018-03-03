@@ -10,7 +10,6 @@ hyper-tls = "0.1"
 ftp = "2.2"
 tokio-core = "0.1"
 clap = "2.29"
-ipnetwork = "0.12"
 ip-db = { path = "../" }
 
 [dependencies.smoltcp]
