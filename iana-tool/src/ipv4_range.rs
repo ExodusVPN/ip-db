@@ -76,10 +76,13 @@ impl Iterator for Ipv4CidrIter {
         if self.end > self.start {
             let mut shift = min(32, self.start.trailing_zeros());
             let num: u64;
+
             loop {
                 let n = 2u64.pow(shift);
-                if self.start + n > self.end {
-                    if shift == 0 { panic!("oops ...") }
+                if self.start + n > self.end + 1 {
+                    if shift == 0 {
+                        panic!("oops ...")
+                    }
                     shift -= 1;
                 } else {
                     num = n;
