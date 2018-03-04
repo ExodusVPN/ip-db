@@ -1,6 +1,5 @@
 extern crate futures;
 extern crate tokio_core;
-extern crate flate2;
 extern crate hyper;
 extern crate hyper_tls;
 
