@@ -1,5 +1,6 @@
 
 use smoltcp::wire::{
+    IpAddress,
     Ipv4Address, Ipv4Cidr,
     Ipv6Address, Ipv6Cidr,
 };
@@ -144,6 +145,32 @@ pub enum IpBlock {
 }
 
 impl IpBlock {
+    pub fn first(&self) -> IpAddress {
+        match *self {
+            IpBlock::Ipv4Range(v4_range) => IpAddress::Ipv4(v4_range.first()),
+            IpBlock::Ipv4Cidr(v4_cidr) => {
+                IpAddress::from(v4_cidr.network().address())
+            },
+            IpBlock::Ipv6Cidr(v6_cidr) => {
+                IpAddress::from(v6_cidr.address())
+            },
+        }
+    }
+
+    pub fn last(&self) -> IpAddress {
+        match *self {
+            IpBlock::Ipv4Range(v4_range) => IpAddress::Ipv4(v4_range.last()),
+            IpBlock::Ipv4Cidr(v4_cidr) => {
+                let max = 2u32.pow(v4_cidr.prefix_len() as u32);
+                IpAddress::from(Ipv4Address::from(Ipv4Addr::from(max)))
+            },
+            IpBlock::Ipv6Cidr(v6_cidr) => {
+                let max = 2u128.pow(v6_cidr.prefix_len() as u32);
+                IpAddress::from(Ipv6Address::from(Ipv6Addr::from(max)))
+            },
+        }
+    }
+
     pub fn is_ipv4(&self) -> bool {
         match *self {
             IpBlock::Ipv4Range(_) | IpBlock::Ipv4Cidr(_) => true,
@@ -159,6 +186,7 @@ impl IpBlock {
     }
 }
 
+
 impl fmt::Display for IpBlock {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
@@ -170,7 +198,7 @@ impl fmt::Display for IpBlock {
 }
 
 
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]
+#[derive(Debug, Copy, Clone, Hash, Eq)]
 pub struct Record {
     src_registry: Registry,
     country: Country,
@@ -180,7 +208,6 @@ pub struct Record {
 }
 
 impl Record {
-
     pub fn src_registry(&self) -> Registry {
         self.src_registry
     }
@@ -226,9 +253,22 @@ impl Record {
 
 impl Ord for Record {
     fn cmp(&self, other: &Record) -> cmp::Ordering {
-        self.ip_block.cmp(&other.ip_block)
+        self.ip_block.first().cmp(&other.ip_block.first())
     }
 }
+
+impl PartialOrd for Record {
+    fn partial_cmp(&self, other: &Record) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Record {
+    fn eq(&self, other: &Self) -> bool {
+        self.ip_block.first() == other.ip_block.first()
+    }
+}
+
 
 impl fmt::Display for Record {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -62,14 +62,64 @@ fn main () {
     if let Some(_sub_m) = matches.subcommand_matches("sync") {
         iana::sync(&data_path);
     } else if let Some(_sub_m) = matches.subcommand_matches("parse") {
-        let records = iana::parse(&data_path);
+        let record_sets = iana::parse(&data_path);
 
-        let mut output_file = OpenOptions::new().create(true).write(true).append(true)
-                            .open(data_path.join("records"))
+        let mut v4_records: Vec<&iana::Record> = record_sets.iter().filter(|record| {
+            record.is_ipv4() && record.src_registry() != iana::Registry::Iana
+        } ).collect();
+        let mut v6_records: Vec<&iana::Record> = record_sets.iter().filter(|record| {
+            record.is_ipv6() && record.src_registry() != iana::Registry::Iana
+        } ).collect();
+
+        let mut iana_v4_records: Vec<&iana::Record> = record_sets.iter().filter(|record| {
+            record.is_ipv4() && record.dst_registry().is_some() && record.src_registry() == iana::Registry::Iana
+        } ).collect();
+        let mut iana_v6_records: Vec<&iana::Record> = record_sets.iter().filter(|record| {
+            record.is_ipv6() && record.dst_registry().is_some() && record.src_registry() == iana::Registry::Iana
+        } ).collect();
+
+        v4_records.sort_unstable();
+        v6_records.sort_unstable();
+        iana_v4_records.sort_unstable();
+        iana_v6_records.sort_unstable();
+        
+        let v4_output_filepath = data_path.join("v4_records");
+        let v6_output_filepath = data_path.join("v6_records");
+        let iana_v4_output_filepath = data_path.join("iana_v4_records");
+        let iana_v6_output_filepath = data_path.join("iana_v6_records");
+
+        let _ = fs::remove_file(&v4_output_filepath);
+        let _ = fs::remove_file(&v6_output_filepath);
+        let _ = fs::remove_file(&iana_v4_output_filepath);
+        let _ = fs::remove_file(&iana_v6_output_filepath);
+
+        let mut v4_output_file = OpenOptions::new().create(true).write(true).append(true)
+                            .open(&v4_output_filepath)
                             .unwrap();
-        for record in records.iter() {
-            output_file.write(format!("{}\n", record).as_bytes()).unwrap();
+        let mut v6_output_file = OpenOptions::new().create(true).write(true).append(true)
+                            .open(&v6_output_filepath)
+                            .unwrap();
+        let mut iana_v4_output_file = OpenOptions::new().create(true).write(true).append(true)
+                            .open(&iana_v4_output_filepath)
+                            .unwrap();
+        let mut iana_v6_output_file = OpenOptions::new().create(true).write(true).append(true)
+                            .open(&iana_v6_output_filepath)
+                            .unwrap();
+
+        for record in v4_records.iter() {
+            v4_output_file.write(format!("{}\n", record).as_bytes()).unwrap();
         }
+        for record in v6_records.iter() {
+            v6_output_file.write(format!("{}\n", record).as_bytes()).unwrap();
+        }
+
+        for record in iana_v4_records.iter() {
+            iana_v4_output_file.write(format!("{}\n", record).as_bytes()).unwrap();
+        }
+        for record in iana_v6_records.iter() {
+            iana_v6_output_file.write(format!("{}\n", record).as_bytes()).unwrap();
+        }
+
     } else {
         println!("{}", &matches.usage());
     }
