@@ -33,7 +33,9 @@ mod parse;
 pub use country::Country;
 pub use registry::Registry;
 pub use status::Status;
+#[cfg(feature = "sync")]
 pub use sync::sync;
+#[cfg(feature = "parse")]
 pub use parse::{parse, Record, IpBlock, Ipv4Range};
 
 
