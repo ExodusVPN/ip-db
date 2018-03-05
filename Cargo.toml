@@ -1,9 +1,38 @@
 [package]
-name = "ip-db"
+name = "iana"
 version = "0.1.0"
-authors = ["luozijun <luozijun.assistant@protonmail.com>"]
+authors = ["luozijun <luozijun.assistant@gmail.com>"]
 
-[workspace]
-members = [ "iana-tool" ]
+
+[[bin]]
+name = "iana"
+path = "src/bin/iana.rs"
+required-features = ["parse", "sync", "clap"]
+
 
 [dependencies]
+log = "0.4"
+env_logger = "0.5"
+cfg-if = "0.1"
+
+clap = { version = "2.29", optional = true }
+futures = { version = "0.1", optional = true }
+tokio-core = { version = "0.1", optional = true }
+hyper = { version = "0.11", optional = true }
+hyper-tls = { version = "0.1", optional = true }
+
+[dependencies.smoltcp]
+git = "https://github.com/m-labs/smoltcp.git"
+branch = "master"
+default-features = false
+features = [
+    "std", "log",
+    "proto-ipv4", "proto-ipv6",
+    "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"
+]
+optional = true
+
+[features]
+sync  = [ "smoltcp", "futures", "tokio-core", "hyper", "hyper-tls" ]
+parse = [ "smoltcp" ]
+default = [ "sync", "parse", "clap" ]
