@@ -21,8 +21,8 @@ use std::collections::HashSet;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub struct Ipv4Range {
-    start_ip: Ipv4Address,
-    end_ip  : Ipv4Address,
+    pub start_ip: Ipv4Address,
+    pub end_ip  : Ipv4Address,
 }
 
 impl Ord for Ipv4Range {
@@ -161,11 +161,24 @@ impl IpBlock {
         match *self {
             IpBlock::Ipv4Range(v4_range) => IpAddress::Ipv4(v4_range.last()),
             IpBlock::Ipv4Cidr(v4_cidr) => {
-                let max = 2u32.pow(v4_cidr.prefix_len() as u32);
+                
+                let first_number = match self.first() {
+                    IpAddress::Ipv4(v4_addr) => u32::from(Ipv4Addr::from(v4_addr)),
+                    IpAddress::Ipv6(_) => unreachable!(),
+                    _ => unreachable!()
+                };
+
+                let max = first_number + 2u32.pow(v4_cidr.prefix_len() as u32);
                 IpAddress::from(Ipv4Address::from(Ipv4Addr::from(max)))
             },
             IpBlock::Ipv6Cidr(v6_cidr) => {
-                let max = 2u128.pow(v6_cidr.prefix_len() as u32);
+                let first_number = match self.first() {
+                    IpAddress::Ipv4(_) => unreachable!(),
+                    IpAddress::Ipv6(v6_addr) => u128::from(Ipv6Addr::from(v6_addr)),
+                    _ => unreachable!()
+                };
+
+                let max = first_number + 2u128.pow(v6_cidr.prefix_len() as u32);
                 IpAddress::from(Ipv6Address::from(Ipv6Addr::from(max)))
             },
         }
@@ -200,11 +213,11 @@ impl fmt::Display for IpBlock {
 
 #[derive(Debug, Copy, Clone, Hash, Eq)]
 pub struct Record {
-    src_registry: Registry,
-    country: Country,
-    ip_block: IpBlock,
-    status: Status,
-    dst_registry: Option<Registry>,
+    pub src_registry: Registry,
+    pub country: Country,
+    pub ip_block: IpBlock,
+    pub status: Status,
+    pub dst_registry: Option<Registry>,
 }
 
 impl Record {
@@ -248,6 +261,25 @@ impl Record {
 
     pub fn is_ipv6(&self) -> bool {
         self.ip_block.is_ipv6()
+    }
+
+    pub fn codegen(&self) -> String {
+        let first_ip = self.ip_block.first();
+        let last_ip = self.ip_block.last();
+        
+        let ip_to_number_string = |ipaddr| -> String {
+            match ipaddr {
+                IpAddress::Ipv4(v4_addr) => format!("{}", u32::from(Ipv4Addr::from(v4_addr))),
+                IpAddress::Ipv6(v6_addr) => format!("[{}]", 
+                    &v6_addr.0.iter().map(|d| format!("{}", d)).collect::<Vec<String>>().join(", ") ),
+                _ => unreachable!()
+            }
+        };
+        
+        format!("({}, {}, {})",
+                ip_to_number_string(first_ip),
+                ip_to_number_string(last_ip),
+                self.country.index())
     }
 }
 

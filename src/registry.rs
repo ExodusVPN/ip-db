@@ -8,10 +8,11 @@ use error::Error;
 /// Number Resources
 /// 
 /// `https://www.iana.org/numbers`
+#[repr(u8)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub enum Registry {
     /// Africa Region
-    Afrinic,
+    Afrinic = 0u8,
     /// Asia/Pacific Region
     Apnic,
     /// Canada, USA, and some Caribbean Islands
@@ -27,6 +28,31 @@ pub enum Registry {
 }
 
 impl Registry {
+    pub fn from_index(index: u8) -> Result<Self, ()> {
+        match index {
+            0u8 => Ok(Registry::Afrinic),
+            1u8 => Ok(Registry::Apnic),
+            2u8 => Ok(Registry::Arin),
+            3u8 => Ok(Registry::Iana),
+            4u8 => Ok(Registry::Ietf),
+            5u8 => Ok(Registry::Lacnic),
+            6u8 => Ok(Registry::Ripencc),
+            _ => Err(())
+        }
+    }
+
+    pub fn index(&self) -> u8 {
+        match *self {
+            Registry::Afrinic => 0u8,
+            Registry::Apnic => 1u8,
+            Registry::Arin => 2u8,
+            Registry::Iana => 3u8,
+            Registry::Ietf => 4u8,
+            Registry::Lacnic => 5u8,
+            Registry::Ripencc => 6u8,
+        }
+    }
+
     pub fn description(&self) -> &str {
         match *self {
             Registry::Afrinic => "Africa Region",

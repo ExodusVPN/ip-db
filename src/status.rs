@@ -4,13 +4,34 @@ use std::fmt;
 
 use error::Error;
 
-
+#[repr(u8)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]
 pub enum Status {
-    Allocated,
+    Allocated = 0u8,
     Assigned,
     Available,
     Reserved,
+}
+
+impl Status {
+    pub fn from_index(index: u8) -> Result<Self, ()> {
+        match index {
+            0 => Ok(Status::Allocated),
+            1 => Ok(Status::Assigned),
+            2 => Ok(Status::Available),
+            3 => Ok(Status::Reserved),
+            _ => Err(())
+        }
+    }
+
+    pub fn index(&self) -> u8 {
+        match *self {
+            Status::Allocated => 0,
+            Status::Assigned => 1,
+            Status::Available => 2,
+            Status::Reserved => 3,
+        }
+    }
 }
 
 impl FromStr for Status {
