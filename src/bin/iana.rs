@@ -63,8 +63,9 @@ fn main () {
         iana::sync(&data_path);
     } else if let Some(_sub_m) = matches.subcommand_matches("parse") {
         let records = iana::parse(&data_path);
+
         let mut output_file = OpenOptions::new().create(true).write(true).append(true)
-                            .open("all")
+                            .open(data_path.join("records"))
                             .unwrap();
         for record in records.iter() {
             output_file.write(format!("{}\n", record).as_bytes()).unwrap();
