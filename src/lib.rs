@@ -23,7 +23,9 @@ mod country;
 mod registry;
 mod status;
 mod error;
+#[doc(hidden)]
 mod v4_db;
+#[doc(hidden)]
 mod v6_db;
 
 #[cfg(feature = "sync")]

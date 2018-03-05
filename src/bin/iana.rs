@@ -146,8 +146,8 @@ fn main () {
         let v4_db = v4_records.iter().map(|record| record.codegen()).collect::<Vec<String>>();
         let v6_db = v6_records.iter().map(|record| record.codegen()).collect::<Vec<String>>();
 
-        v4_db_file.write(format!("pub const IPV4_RECORDS: [(u32, u32, u8); {}] = [\n{}\n];", v4_db.len(), v4_db.join(",\n")).as_bytes()).unwrap();
-        v6_db_file.write(format!("pub const IPV6_RECORDS: [([u8; 16], [u8; 16], u8); {}] = [\n{}\n];", v6_db.len(), v6_db.join(",\n")).as_bytes()).unwrap();
+        v4_db_file.write(format!("#[doc(hidden)]\npub const IPV4_RECORDS: [(u32, u32, u8); {}] = [\n{}\n];", v4_db.len(), v4_db.join(",\n")).as_bytes()).unwrap();
+        v6_db_file.write(format!("#[doc(hidden)]\npub const IPV6_RECORDS: [([u8; 16], [u8; 16], u8); {}] = [\n{}\n];", v6_db.len(), v6_db.join(",\n")).as_bytes()).unwrap();
 
     } else if let Some(_sub_m) = matches.subcommand_matches("lookup") {
         let ipaddr: IpAddr = _sub_m.value_of("ipaddr").unwrap().to_lowercase().parse().unwrap();
