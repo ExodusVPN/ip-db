@@ -1,13 +1,11 @@
-ip-db
-========
+IANA-IP
+=========
 
 
-IANA Tool
-----------
 
 .. code:: bash
 
-    cargo build -p iana-tool
-    target/debug/iana-tool sync
-    target/debug/iana-tool parse --help
+    cargo build --bin iana
+    target/debug/iana sync
+    target/debug/iana parse
 
