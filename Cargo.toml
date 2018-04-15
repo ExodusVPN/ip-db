@@ -5,15 +5,24 @@ authors = ["luozijun <luozijun.assistant@gmail.com>"]
 
 
 [[bin]]
-name = "iana"
-path = "src/bin/iana.rs"
-required-features = ["parse", "sync", "clap"]
+name = "sync"
+path = "src/bin/sync.rs"
+required-features = ["sync"]
+
+[[bin]]
+name = "parse"
+path = "src/bin/parse.rs"
+required-features = ["parse"]
+
+[[bin]]
+name = "lookup"
+path = "src/bin/lookup.rs"
+required-features = [ ]
 
 
 [dependencies]
 log = "0.4"
 env_logger = "0.5"
-cfg-if = "0.1"
 
 clap = { version = "2.29", optional = true }
 futures = { version = "0.1", optional = true }
@@ -28,15 +37,14 @@ default-features = false
 features = [
     "std", "log",
     "proto-ipv4", "proto-ipv6",
-    "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"
+    # "socket-raw", "socket-icmp", "socket-udp", "socket-tcp"
 ]
 optional = true
 
 [dev-dependencies]
 rand = "0.4"
-byteorder = "1.2"
 
 [features]
-sync  = [ "smoltcp", "futures", "tokio-core", "hyper", "hyper-tls" ]
-parse = [ "smoltcp" ]
-default = [ "sync", "parse", "clap" ]
+sync  = [ "clap", "smoltcp", "futures", "tokio-core", "hyper", "hyper-tls" ]
+parse = [ "clap", "smoltcp" ]
+default = [ ]

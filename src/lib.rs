@@ -1,46 +1,28 @@
-#![feature(i128_type, test)]
-extern crate test;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-#[macro_use]
-extern crate cfg_if;
-
-cfg_if! {
-    if #[cfg(feature = "sync")] {
-        extern crate futures;
-        extern crate tokio_core;
-        extern crate hyper;
-        extern crate hyper_tls;
-        extern crate smoltcp;
-    } else if #[cfg(feature = "parse")] {
-        extern crate smoltcp;
-    }
-}
-
 
 mod country;
 mod registry;
 mod status;
 mod error;
-#[doc(hidden)]
+
+#[cfg( all(not(feature = "sync"), not(feature = "parse")) )]
 mod v4_db;
-#[doc(hidden)]
+#[cfg( all(not(feature = "sync"), not(feature = "parse")) )]
 mod v6_db;
 
-#[cfg(feature = "sync")]
-mod sync;
-#[cfg(feature = "parse")]
-mod parse;
+#[cfg(any(feature = "sync", feature = "parse"))]
+mod v4_db {
+    pub static IPV4_RECORDS: [(u32, u32, u8); 0] = [];
+}
+#[cfg(any(feature = "sync", feature = "parse"))]
+mod v6_db {
+    pub static IPV6_RECORDS: [(u128, u128, u8); 0] = [];
+}
 
 
 pub use country::Country;
 pub use registry::Registry;
 pub use status::Status;
-#[cfg(feature = "sync")]
-pub use sync::sync;
-#[cfg(feature = "parse")]
-pub use parse::{parse, Record, IpBlock, Ipv4Range};
+
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::cmp::Ordering;
@@ -49,7 +31,6 @@ use std::cmp::Ordering;
 // Files not exists
 // ("delegated-arin-latest",             "https://ftp.arin.net/pub/stats/arin/delegated-arin-latest"),
 // ("delegated-iana-extended-latest",    "ftp://ftp.apnic.net/public/stats/iana/delegated-iana-extended-latest"),
-#[cfg(any(feature = "sync", feature = "parse"))]
 pub static IANA_RIR_FILES: [(&str, &str); 10] = [
     ("delegated-arin-extended-latest",    "https://ftp.arin.net/pub/stats/arin/delegated-arin-extended-latest"),
     ("delegated-ripencc-latest",          "https://ftp.ripe.net/pub/stats/ripencc/delegated-ripencc-latest"),
@@ -90,7 +71,7 @@ pub fn lookup(ip: &IpAddr) -> Option<(IpAddr, IpAddr, Country)> {
             }
         }
         &IpAddr::V6(v6_addr) => {
-            let v6_number = v6_addr.octets();
+            let v6_number = u128::from(v6_addr);
             let ret = v6_db::IPV6_RECORDS.binary_search_by(|&(first, last, _cc)| {
                 if v6_number >= last {
                     Ordering::Less
@@ -106,8 +87,8 @@ pub fn lookup(ip: &IpAddr) -> Option<(IpAddr, IpAddr, Country)> {
             match ret {
                 Ok(pos) => {
                     let (first, last, cc) = v6_db::IPV6_RECORDS[pos];
-                    Some( (IpAddr::from(first),
-                           IpAddr::from(last),
+                    Some( (IpAddr::from(Ipv6Addr::from(first)),
+                           IpAddr::from(Ipv6Addr::from(last)),
                            Country::from_index(cc).unwrap() ))
                 }
                 Err(_) => None
@@ -116,32 +97,13 @@ pub fn lookup(ip: &IpAddr) -> Option<(IpAddr, IpAddr, Country)> {
     }
 }
 
-#[bench]
-fn bench_lookup_ipv4(b: &mut test::Bencher) {
-    extern crate rand;
 
-    let ip = IpAddr::from(Ipv4Addr::from([
-        rand::random::<u8>(), rand::random::<u8>(),
-        rand::random::<u8>(), rand::random::<u8>(),
-    ]));
-
-    b.iter(|| {
-        let _ = lookup(&ip);
-    })
+#[test]
+fn test_lookup_ipv4() {
+    assert_eq!(lookup(&IpAddr::from(Ipv4Addr::new(8, 8, 8, 8))).is_some(), true);
 }
 
-#[bench]
-fn bench_lookup_ipv6(b: &mut test::Bencher) {
-    extern crate rand;
-
-    let ip = IpAddr::from(Ipv6Addr::from([
-        rand::random::<u16>(), rand::random::<u16>(),
-        rand::random::<u16>(), rand::random::<u16>(),
-        rand::random::<u16>(), rand::random::<u16>(),
-        rand::random::<u16>(), rand::random::<u16>(),
-    ]));
-    
-    b.iter(|| {
-        let _ = lookup(&ip);
-    })
+#[test]
+fn test_lookup_ipv6() {
+    assert_eq!(lookup(&"2001:218::".parse().unwrap()).is_some(), true);
 }
