@@ -5,5 +5,6 @@ pub enum Error {
     ParseStatusError(String),
     ParseCountryError(String),
     ParseRegistryError(String),
+    ParseRecordError(String),
 }
 

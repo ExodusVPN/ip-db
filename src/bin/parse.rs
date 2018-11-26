@@ -331,18 +331,18 @@ impl fmt::Display for Record {
 }
 
 impl FromStr for Record {
-    type Err = ();
+    type Err = iana::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let fields: Vec<&str> = s.split("|").collect();
         
         if fields.len() < 7 {
             debug!("Less than 7 fields length of this RIR Record");
-            return Err(())
+            return Err(iana::Error::ParseRecordError("Less than 7 fields length of this RIR Record".to_string()));
         }
         
-        let src_registry = Registry::from_str(fields[0]).unwrap();
+        let src_registry = Registry::from_str(fields[0])?;
         let cc = if fields[1].trim() == "" { "ZZ" } else { fields[1] };
-        let country_code = Country::from_str(cc).unwrap();
+        let country_code = Country::from_str(cc)?;
         let type_  = fields[2];
 
         match type_ {
@@ -400,7 +400,7 @@ impl FromStr for Record {
             }
             _ => {
                 trace!("Not an IPv4 or IPv6 Record Line.");
-                Err(())
+                Err(iana::Error::ParseRecordError("Not an IPv4 or IPv6 Record Line.".to_string()))
             }
         }
     }
@@ -453,10 +453,26 @@ fn parse(data_path: &PathBuf) -> HashSet<Record> {
                 continue;
             }
             
-            if let Ok(record) = Record::from_str(line) {
-                records.insert(record);
-            } else {
-                trace!("Parse Line#{} failed.", line_idx);
+            match Record::from_str(line) {
+                Ok(record) => {
+                    records.insert(record);
+                },
+                Err(e) => {
+                    match e {
+                        iana::Error::ParseRecordError(ref descp) => {
+                            if descp.as_str() == "Not an IPv4 or IPv6 Record Line." {
+
+                            } else {
+                                trace!("Parse Line#{} failed.", line_idx);
+                                error!("{:?}", e);
+                            }
+                        },
+                        _ => {
+                            trace!("Parse Line#{} failed.", line_idx);
+                            error!("{:?}", e);
+                        },
+                    }
+                }
             }
 
             line_idx += 1;

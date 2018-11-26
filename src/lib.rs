@@ -22,7 +22,7 @@ mod v6_db {
 pub use country::Country;
 pub use registry::Registry;
 pub use status::Status;
-
+pub use error::Error;
 
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::cmp::Ordering;
