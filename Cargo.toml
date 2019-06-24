@@ -2,7 +2,10 @@
 name = "iana"
 version = "0.1.0"
 authors = ["luozijun <luozijun.assistant@gmail.com>"]
-
+edition = "2018"
+exclude = [
+    "data/",
+]
 
 [[bin]]
 name = "sync"
