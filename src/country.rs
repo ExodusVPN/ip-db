@@ -3,7 +3,7 @@
 use std::str::FromStr;
 use std::fmt;
 
-use error::Error;
+use crate::error::Error;
 
 
 /// Country Code List: ISO 3166-1993 (E)

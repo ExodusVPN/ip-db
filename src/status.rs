@@ -2,7 +2,7 @@
 use std::str::FromStr;
 use std::fmt;
 
-use error::Error;
+use crate::error::Error;
 
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd)]

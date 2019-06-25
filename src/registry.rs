@@ -2,7 +2,7 @@
 use std::str::FromStr;
 use std::fmt;
 
-use error::Error;
+use crate::error::Error;
 
 
 /// Number Resources
