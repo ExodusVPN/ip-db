@@ -25,7 +25,7 @@ required-features = [ ]
 
 [dependencies]
 log = "0.4"
-env_logger = { version = "0.6", default-features = false, features = [ "termcolor", "atty", "humantime" ] }
+env_logger = { version = "0.8", default-features = false, features = [ "termcolor", "atty", "humantime" ] }
 clap       = { version = "2.33", optional = true }
 futures    = { version = "0.1", optional = true }
 tokio-core = { version = "0.1", optional = true }
